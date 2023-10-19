@@ -33,7 +33,7 @@ func Add() error {
 		return err
 	}
 
-	project, err := detect.Golang()
+	project, err := detect.Run()
 	if err != nil {
 		return err
 	}
@@ -43,9 +43,13 @@ func Add() error {
 		return err
 	}
 
+	if !changes.Confirmed {
+		return nil
+	}
+
 	var releases []string
-	for k, v := range changes.Releases {
-		releases = append(releases, fmt.Sprintf("%s: %s", k, v))
+	for p, b := range changes.Releases {
+		releases = append(releases, fmt.Sprintf("%s: %s", p, b))
 	}
 
 	if len(releases) == 0 {

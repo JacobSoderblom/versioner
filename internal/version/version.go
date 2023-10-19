@@ -12,16 +12,26 @@ import (
 	"github.com/Masterminds/semver"
 	"github.com/go-git/go-git/v5"
 	"github.com/go-git/go-git/v5/plumbing"
+	"github.com/pkg/errors"
+	"golang.org/x/text/cases"
+	"golang.org/x/text/language"
 )
 
 var (
 	Major = "major"
 	Minor = "minor"
 	Patch = "patch"
+	caser = cases.Title(language.English)
 )
 
 func Bump(repo *git.Repository) error {
-	if err := config.Ensure(); err != nil {
+	conf, err := config.Read()
+	if err != nil {
+		return err
+	}
+
+	w, err := repo.Worktree()
+	if err != nil {
 		return err
 	}
 
@@ -57,18 +67,90 @@ func Bump(repo *git.Repository) error {
 
 	bumps := getHighestBumps(changesets)
 
-	for project, bump := range bumps {
-		_, _, ver, err := findLatestSemverTag(repo, project)
-		if err != nil {
+	_, _, ver, err := findLatestSemverTag(repo, "")
+	if err != nil {
+		return err
+	}
+
+	var newVer semver.Version
+	var project string
+
+	for p, bump := range bumps {
+		project = p
+		newVer = bumpVersion(ver, bump)
+
+		break
+	}
+
+	tag := fmt.Sprintf("v%s", newVer.String())
+
+	p := path.Join(wd, "CHANGELOG.md")
+
+	b, err := readChangelog(p, project)
+	if err != nil {
+		return err
+	}
+
+	entry := createEntry(tag, changesets)
+
+	content := strings.Split(string(b), "\n")
+	content = insert(content, 1, entry)
+	text := strings.Join(content, "\n")
+
+	if err = writeChangelog(p, []byte(text)); err != nil {
+		return err
+	}
+
+	conf.NextVersion = tag
+
+	if err = config.Set(conf); err != nil {
+		return err
+	}
+
+	for _, cp := range changesetPaths {
+		if err = os.Remove(cp); err != nil {
+			return err
+		}
+	}
+
+	if conf.Commit {
+		if err = w.AddWithOptions(&git.AddOptions{All: true}); err != nil {
 			return err
 		}
 
-		newVer := bumpVersion(ver, bump)
+		msg := "New version"
+		if len(conf.CommitMsg) > 0 {
+			msg = conf.CommitMsg
+		}
 
-		fmt.Println(fmt.Sprintf("new version will be '%s'", newVer.String()))
+		if _, err = w.Commit(msg, &git.CommitOptions{
+			Amend: conf.AmendCommit,
+		}); err != nil {
+			return err
+		}
 	}
 
 	return nil
+}
+
+func createEntry(version string, changesets []string) string {
+	groupedChangelog := groupChangesets(changesets)
+
+	entry := fmt.Sprintf("\n## %s\n\n", version)
+
+	for bump, changes := range groupedChangelog {
+		entry += fmt.Sprintf("### %s changes\n\n", caser.String(strings.Split(bump, ": ")[1]))
+		for i, change := range changes {
+			if i == len(changes)-1 {
+				entry += fmt.Sprintf("- %s", change)
+				continue
+			}
+
+			entry += fmt.Sprintf("- %s\n", change)
+		}
+	}
+
+	return entry
 }
 
 func findLatestSemverTag(repo *git.Repository, tagToFind string) (string, plumbing.Hash, *semver.Version, error) {
@@ -127,13 +209,10 @@ func getHighestBumps(changesets []string) map[string]string {
 			continue
 		}
 
-		projectsStr := changeset[4:]
-		projectsStr = projectsStr[:strings.Index(projectsStr, "---")]
+		bb := getBumps(changeset)
 
-		projects := removeEmptyStrings(strings.Split(projectsStr, "\n"))
-
-		for _, project := range projects {
-			nameAndBump := strings.Split(project, ": ")
+		for _, bump := range bb {
+			nameAndBump := strings.Split(bump, ": ")
 			if len(nameAndBump) < 2 {
 				continue
 			}
@@ -150,15 +229,15 @@ func getHighestBumps(changesets []string) map[string]string {
 }
 
 func isBumpHigher(base, comp string) bool {
-	if base == "major" {
+	if base == Major {
 		return false
 	}
 
-	if comp == "major" {
+	if comp == Major {
 		return true
 	}
 
-	if base == "minor" && comp == "patch" {
+	if base == Minor && comp == Patch {
 		return false
 	}
 
@@ -169,9 +248,9 @@ func bumpVersion(ver *semver.Version, bump string) semver.Version {
 	var newVer semver.Version
 
 	switch bump {
-	case "major":
+	case Major:
 		newVer = ver.IncMajor()
-	case "minor":
+	case Minor:
 		newVer = ver.IncMinor()
 	default:
 		newVer = ver.IncPatch()
@@ -189,4 +268,62 @@ func removeEmptyStrings(s []string) []string {
 	}
 
 	return r
+}
+
+func groupChangesets(changesets []string) map[string][]string {
+	g := map[string][]string{}
+
+	for _, c := range changesets {
+		text := getChangelogText(c)
+
+		for _, bump := range getBumps(c) {
+			g[bump] = append(g[bump], text)
+		}
+	}
+
+	return g
+}
+
+func getBumps(changeset string) []string {
+	bumpStr := changeset[4:]
+	bumpStr = bumpStr[:strings.Index(bumpStr, "---")]
+
+	bumps := removeEmptyStrings(strings.Split(bumpStr, "\n"))
+
+	return bumps
+}
+
+func getChangelogText(changeset string) string {
+	changeset = changeset[4:]
+	changeset = changeset[strings.Index(changeset, "---")+5 : len(changeset)-2]
+
+	return changeset
+}
+
+func readChangelog(filePath, project string) ([]byte, error) {
+	_, err := os.Stat(filePath)
+	if errors.Is(err, os.ErrNotExist) {
+		if err = os.WriteFile(filePath, []byte(fmt.Sprintf("# %s\n", project)), os.ModePerm); err != nil {
+			return []byte{}, err
+		}
+	}
+
+	return os.ReadFile(filePath)
+}
+
+func writeChangelog(filePath string, content []byte) error {
+	if err := os.Remove(filePath); err != nil {
+		return err
+	}
+
+	return os.WriteFile(filePath, content, os.ModePerm)
+}
+
+func insert(a []string, index int, value string) []string {
+	if len(a) == index {
+		return append(a, value)
+	}
+	a = append(a[:index+1], a[index:]...)
+	a[index] = value
+	return a
 }

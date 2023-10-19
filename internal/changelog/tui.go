@@ -2,6 +2,7 @@ package changelog
 
 import (
 	"versioner/internal/detect"
+	"versioner/internal/tui/confirm"
 	"versioner/internal/tui/markdown"
 	selectlist "versioner/internal/tui/select-list"
 	"versioner/internal/version"
@@ -16,7 +17,7 @@ type view int
 const (
 	bump view = iota
 	summary
-	confirm
+	confirmChangeset
 	done
 )
 
@@ -37,12 +38,14 @@ func startTea(project detect.Project) (Changelog, error) {
 	}
 
 	releases := map[string]string{}
+
 	releases[project.Name] = ""
 
 	model := mainModel{
 		state:   bump,
 		bump:    selectlist.New("What kind of release is this?", selectlist.Single, items),
 		summary: markdown.New("Please enter a summary for this change (this will be in the changelogs).", "Submit empty line to open external editor"),
+		confirm: confirm.New("Is this your desired changeset? (Y/n)"),
 		result: Changelog{
 			Releases: releases,
 		},
@@ -60,7 +63,7 @@ func startTea(project detect.Project) (Changelog, error) {
 	}
 
 	if m.err != nil {
-		return m.result, err
+		return m.result, m.err
 	}
 
 	return m.result, nil
@@ -117,33 +120,34 @@ func (m mainModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 			m.result.Summary = bm.Value()
 
-			if m.result.Summary == "" {
-				summary, err := openEditor()
-				m.err = err
-				m.result.Summary = summary
-			}
-
-			if m.result.Summary == "" {
+			if len(m.result.Summary) == 0 {
 				m.err = errors.New("summary cannot be empty")
-			}
-
-			for _, v := range m.result.Releases {
-				if v == version.Major {
-					m.state = confirm
-				}
-			}
-
-			if m.state != confirm {
 				return m, tea.Quit
 			}
 
+			m.state = confirmChangeset
 		}
 
 		m.summary = s
 		cmd = c
 
-	case confirm:
-		_, cmd = m.confirm.Update(msg)
+	case confirmChangeset:
+		s, c := m.confirm.Update(msg)
+
+		bm, ok := s.(confirm.Model)
+		if !ok {
+			m.err = errors.New("could not assert Markdown Model")
+			return m, tea.Quit
+		}
+
+		if ok && bm.Done() {
+			m.result.Confirmed = bm.Confirm()
+
+			return m, tea.Quit
+		}
+
+		m.confirm = s
+		cmd = c
 	}
 
 	cmds = append(cmds, cmd)
@@ -157,7 +161,7 @@ func (m mainModel) View() string {
 		return m.bump.View()
 	case summary:
 		return m.summary.View()
-	case confirm:
+	case confirmChangeset:
 		return m.confirm.View()
 	}
 
