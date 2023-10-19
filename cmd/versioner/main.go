@@ -5,6 +5,7 @@ import (
 	"os"
 	"versioner/internal/changelog"
 	"versioner/internal/config"
+	"versioner/internal/tag"
 	"versioner/internal/version"
 
 	"github.com/alecthomas/kong"
@@ -40,12 +41,19 @@ func (v VersionCmd) Run(ctx *Context) error {
 	return version.Bump(ctx.Repo)
 }
 
+type TagCmd struct{}
+
+func (t TagCmd) Run(ctx *Context) error {
+	return tag.Tag(ctx.Repo)
+}
+
 var cli struct {
 	Debug bool `help:"Enable debug mode."`
 
 	Init    InitCmd      `cmd:"" help:"Initialize setup of project."`
 	Add     ChangelogCmd `cmd:"" help:"Add changelog to your project"`
 	Version VersionCmd   `cmd:"" help:"Creates a new version based on existing changesets"`
+	Tag     TagCmd       `cmd:"" help:"Creates a new tag of the current version"`
 }
 
 func main() {
