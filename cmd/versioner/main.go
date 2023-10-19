@@ -47,13 +47,24 @@ func (t TagCmd) Run(ctx *Context) error {
 	return tag.Tag(ctx.Repo)
 }
 
+type ChangesetCmd struct{}
+
+func (c ChangesetCmd) Run(ctx *Context) error {
+	changeset, err := changelog.GetLatestChangeSet(ctx.Repo)
+
+	fmt.Print(changeset)
+
+	return err
+}
+
 var cli struct {
 	Debug bool `help:"Enable debug mode."`
 
-	Init    InitCmd      `cmd:"" help:"Initialize setup of project."`
-	Add     ChangelogCmd `cmd:"" help:"Add changelog to your project"`
-	Version VersionCmd   `cmd:"" help:"Creates a new version based on existing changesets"`
-	Tag     TagCmd       `cmd:"" help:"Creates a new tag of the current version"`
+	Init      InitCmd      `cmd:"" help:"Initialize setup of project."`
+	Add       ChangelogCmd `cmd:"" help:"Add changelog to your project"`
+	Version   VersionCmd   `cmd:"" help:"Creates a new version based on existing changesets"`
+	Tag       TagCmd       `cmd:"" help:"Creates a new tag of the current version"`
+	Changeset ChangesetCmd `cmd:"" help:"Gets the changeset of current latest tagged version"`
 }
 
 func main() {

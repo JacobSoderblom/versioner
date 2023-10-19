@@ -8,10 +8,10 @@ import (
 	"path/filepath"
 	"strings"
 	"versioner/internal/config"
+	"versioner/internal/tag"
 
 	"github.com/Masterminds/semver"
 	"github.com/go-git/go-git/v5"
-	"github.com/go-git/go-git/v5/plumbing"
 	"github.com/pkg/errors"
 	"golang.org/x/text/cases"
 	"golang.org/x/text/language"
@@ -67,7 +67,7 @@ func Bump(repo *git.Repository) error {
 
 	bumps := getHighestBumps(changesets)
 
-	_, _, ver, err := findLatestSemverTag(repo, "")
+	_, _, ver, err := tag.FindLatest(repo, "")
 	if err != nil {
 		return err
 	}
@@ -151,53 +151,6 @@ func createEntry(version string, changesets []string) string {
 	}
 
 	return entry
-}
-
-func findLatestSemverTag(repo *git.Repository, tagToFind string) (string, plumbing.Hash, *semver.Version, error) {
-	tagList := make(map[plumbing.Hash]string)
-
-	tags, err := repo.Tags()
-	if err != nil {
-		return "", plumbing.ZeroHash, nil, err
-	}
-
-	for ref, err := tags.Next(); err == nil; ref, err = tags.Next() {
-		tagName := ref.Name().Short()
-		if !strings.Contains(tagName, tagToFind) {
-			continue
-		}
-
-		obj, err := repo.TagObject(ref.Hash())
-		if err == nil {
-			tagList[obj.Target] = tagName
-		} else {
-			tagList[ref.Hash()] = tagName
-		}
-	}
-	tags.Close()
-
-	iter, err := repo.Log(&git.LogOptions{})
-	if err != nil {
-		return "", plumbing.ZeroHash, nil, err
-	}
-	defer iter.Close()
-
-	for ref, err := iter.Next(); err == nil; ref, err = iter.Next() {
-		tag, found := tagList[ref.Hash]
-		if found {
-			version, err := semver.NewVersion(tag)
-			if err == nil {
-				return tag, ref.Hash, version, nil
-			}
-		}
-	}
-
-	version, err := semver.NewVersion("0.0.0")
-	if err != nil {
-		return "", plumbing.ZeroHash, nil, err
-	}
-
-	return "", plumbing.ZeroHash, version, nil
 }
 
 func getHighestBumps(changesets []string) map[string]string {
