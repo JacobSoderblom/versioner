@@ -12,6 +12,7 @@ require (
 	github.com/go-git/go-git/v5 v5.9.0
 	github.com/pkg/errors v0.9.1
 	github.com/tcnksm/go-gitconfig v0.1.2
+	golang.org/x/text v0.13.0
 )
 
 require (
@@ -50,7 +51,6 @@ require (
 	golang.org/x/sync v0.3.0 // indirect
 	golang.org/x/sys v0.12.0 // indirect
 	golang.org/x/term v0.12.0 // indirect
-	golang.org/x/text v0.13.0 // indirect
 	golang.org/x/tools v0.13.0 // indirect
 	gopkg.in/warnings.v0 v0.1.2 // indirect
 )
