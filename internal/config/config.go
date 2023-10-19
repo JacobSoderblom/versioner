@@ -20,8 +20,12 @@ var (
 )
 
 type Configuration struct {
-	BaseBranch string   `json:"baseBranch"`
-	Ignore     []string `json:"ignore"`
+	BaseBranch  string   `json:"baseBranch,omitempty"`
+	Ignore      []string `json:"ignore,omitempty"`
+	Commit      bool     `json:"commit,omitempty"`
+	CommitMsg   string   `json:"commitMsg,omitempty"`
+	AmendCommit bool     `json:"amendCommit,omitempty"`
+	NextVersion string   `json:"nextVersion,omitempty"`
 }
 
 func Create(repo *git.Repository) error {
@@ -98,6 +102,34 @@ func Read() (Configuration, error) {
 	}
 
 	return config, nil
+}
+
+func Set(conf Configuration) error {
+	if err := Ensure(); err != nil {
+		return err
+	}
+
+	wd, err := os.Getwd()
+	if err != nil {
+		return err
+	}
+
+	configPath := path.Join(wd, Dir, fileName)
+
+	if err = os.Remove(configPath); err != nil {
+		return err
+	}
+
+	var b []byte
+	if b, err = json.MarshalIndent(&conf, "", "  "); err != nil {
+		return err
+	}
+
+	if err = os.WriteFile(configPath, b, os.ModePerm); err != nil {
+		return err
+	}
+
+	return nil
 }
 
 func getBaseBranch(repo *git.Repository) (string, error) {
