@@ -3,7 +3,7 @@ package main
 import (
 	"fmt"
 	"os"
-	"versioner/internal/changelog"
+	"versioner/internal/add"
 	"versioner/internal/config"
 	"versioner/internal/tag"
 	"versioner/internal/version"
@@ -32,7 +32,7 @@ func (i *InitCmd) Run(ctx *Context) error {
 type ChangelogCmd struct{}
 
 func (i ChangelogCmd) Run(ctx *Context) error {
-	return changelog.Add()
+	return add.Add()
 }
 
 type VersionCmd struct{}
@@ -50,7 +50,7 @@ func (t TagCmd) Run(ctx *Context) error {
 type ChangesetCmd struct{}
 
 func (c ChangesetCmd) Run(ctx *Context) error {
-	changeset, err := changelog.GetLatestChangeSet(ctx.Repo)
+	changeset, err := add.GetLatestChangeSet(ctx.Repo)
 
 	fmt.Print(changeset)
 
