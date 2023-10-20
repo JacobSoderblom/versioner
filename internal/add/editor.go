@@ -1,4 +1,4 @@
-package changelog
+package add
 
 import (
 	"fmt"

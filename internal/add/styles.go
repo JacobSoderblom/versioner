@@ -1,14 +1,11 @@
-package selectlist
+package add
 
 import (
 	"github.com/charmbracelet/bubbles/list"
 	"github.com/charmbracelet/lipgloss"
 )
 
-const (
-	listHeight   = 14
-	defaultWidth = 52
-)
+const listHeight = 14
 
 var (
 	titleStyle        = lipgloss.NewStyle().MarginLeft(2)
@@ -17,5 +14,4 @@ var (
 	paginationStyle   = list.DefaultStyles().PaginationStyle.PaddingLeft(4)
 	helpStyle         = list.DefaultStyles().HelpStyle.PaddingLeft(4).PaddingBottom(1)
 	quitTextStyle     = lipgloss.NewStyle().Margin(1, 0, 2, 4)
-	docStyles         = lipgloss.NewStyle().Margin(1, 2)
 )

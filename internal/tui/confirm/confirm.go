@@ -1,76 +1,100 @@
 package confirm
 
 import (
-	"fmt"
-	"strings"
-
-	"github.com/charmbracelet/bubbles/textinput"
 	tea "github.com/charmbracelet/bubbletea"
+	"github.com/charmbracelet/lipgloss"
 )
 
 type Model struct {
-	textInput textinput.Model
-	title     string
-	done      bool
-	confirm   bool
+	prompt      string
+	affirmative string
+	negative    string
+	done        bool
+
+	confirmation bool
+
+	defaultSelection bool
+
+	// styles
+	promptStyle     lipgloss.Style
+	selectedStyle   lipgloss.Style
+	unselectedStyle lipgloss.Style
 }
 
-func New(title string) tea.Model {
-	ti := textinput.New()
-	ti.Focus()
-	ti.CharLimit = 1
-	ti.Width = 20
-
-	return Model{
-		textInput: ti,
-		title:     title,
-		confirm:   true,
+func New(prompt string) Model {
+	m := Model{
+		affirmative:      "Yes",
+		negative:         "No",
+		confirmation:     false,
+		defaultSelection: false,
+		prompt:           prompt,
+		selectedStyle:    lipgloss.NewStyle().Background(lipgloss.Color("212")),
+		unselectedStyle:  lipgloss.NewStyle().Background(lipgloss.Color("235")),
+		promptStyle:      lipgloss.NewStyle().Margin(1, 0, 0, 0),
 	}
+
+	return m
 }
 
 func (m Model) Init() tea.Cmd {
-	return textinput.Blink
+	return nil
 }
 
 func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
-	var cmd tea.Cmd
-
 	switch msg := msg.(type) {
+	case tea.WindowSizeMsg:
+		return m, nil
 	case tea.KeyMsg:
-		switch msg.Type {
-		case tea.KeyEnter:
+		switch msg.String() {
+		case "n", "N":
+			m.confirmation = false
 			m.done = true
 			return m, nil
-
-		case tea.KeyRunes:
-			switch strings.ToLower(string(msg.Runes)) {
-			case "y":
-				m.done = true
-				return m, nil
-
-			case "n":
-				m.done = true
-				m.confirm = false
-				return m, nil
+		case "left", "h", "ctrl+p", "tab",
+			"right", "l", "ctrl+n", "shift+tab":
+			if m.negative == "" {
+				break
 			}
+			m.confirmation = !m.confirmation
+		case "enter":
+			m.done = true
+			return m, nil
+		case "y", "Y":
+			m.done = true
+			m.confirmation = true
+			return m, nil
 		}
 	}
-	m.textInput, cmd = m.textInput.Update(msg)
-	return m, cmd
+	return m, nil
 }
 
 func (m Model) View() string {
-	return fmt.Sprintf(
-		"%s\n\n%s",
-		m.title,
-		m.textInput.View(),
-	)
+	if m.done {
+		return ""
+	}
+
+	var aff, neg string
+
+	if m.confirmation {
+		aff = m.selectedStyle.Render(m.affirmative)
+		neg = m.unselectedStyle.Render(m.negative)
+	} else {
+		aff = m.unselectedStyle.Render(m.affirmative)
+		neg = m.selectedStyle.Render(m.negative)
+	}
+
+	// If the option is intentionally empty, do not show it.
+	if m.negative == "" {
+		neg = ""
+	}
+
+	return lipgloss.JoinVertical(lipgloss.Center, m.promptStyle.Render(m.prompt), lipgloss.JoinHorizontal(lipgloss.Left, aff, neg))
 }
 
 func (m Model) Done() bool {
 	return m.done
 }
 
-func (m Model) Confirm() bool {
-	return m.confirm
+func (m Model) Confirmation() bool {
+	return m.confirmation
 }
