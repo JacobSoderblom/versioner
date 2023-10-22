@@ -60,11 +60,26 @@ func (e Entry) Markdown() string {
 
 	sb.WriteString(fmt.Sprintf("## %s\n", e.Version))
 
-	for _, s := range e.Sections {
-		sb.WriteString("\n")
-		sb.WriteString(fmt.Sprintf("### %s\n", s.Title))
+	group := e.groupSections()
 
-		for _, c := range s.Content {
+	if cc, ok := group["Breaking changes"]; ok {
+		sb.WriteString("\n")
+		sb.WriteString("### Breaking changes")
+
+		for _, c := range cc {
+			sb.WriteString("\n")
+			sb.WriteString(c)
+			sb.WriteString("\n")
+		}
+
+		delete(group, "Breaking changes")
+	}
+
+	for k, cc := range group {
+		sb.WriteString("\n")
+		sb.WriteString(fmt.Sprintf("### %s\n", k))
+
+		for _, c := range cc {
 			sb.WriteString("\n")
 			sb.WriteString(c)
 			sb.WriteString("\n")
@@ -72,6 +87,21 @@ func (e Entry) Markdown() string {
 	}
 
 	return sb.String()
+}
+
+func (e Entry) groupSections() map[string][]string {
+	m := map[string][]string{}
+
+	for _, s := range e.Sections {
+		if _, ok := m[s.Title]; ok {
+			m[s.Title] = append(m[s.Title], s.Content...)
+			continue
+		}
+
+		m[s.Title] = s.Content
+	}
+
+	return m
 }
 
 func parseEntry(str string) (Entry, error) {

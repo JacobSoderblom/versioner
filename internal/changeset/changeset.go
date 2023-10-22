@@ -18,36 +18,43 @@ var (
 			Type:          "fix",
 			CanBeBreaking: true,
 			Level:         Patch,
+			Order:         1,
 		}, {
 			Title:         "New features",
 			Type:          "feat",
 			CanBeBreaking: true,
 			Level:         Minor,
+			Order:         0,
 		}, {
 			Title:         "Documentation",
 			Type:          "docs",
 			CanBeBreaking: false,
 			Level:         None,
+			Order:         2,
 		}, {
 			Title:         "Refactoring",
 			Type:          "refactor",
 			CanBeBreaking: false,
 			Level:         None,
+			Order:         3,
 		}, {
 			Title:         "Automations",
 			Type:          "ci",
 			CanBeBreaking: false,
 			Level:         None,
+			Order:         4,
 		}, {
 			Title:         "Miscellaneous",
 			Type:          "chore",
 			CanBeBreaking: false,
 			Level:         None,
+			Order:         5,
 		}, {
 			Title:         "Revert",
 			Type:          "revert",
 			CanBeBreaking: true,
 			Level:         Patch,
+			Order:         6,
 		},
 	}
 )
@@ -133,11 +140,24 @@ func (cc Changesets) Remove() error {
 	return nil
 }
 
+type byOrder Changesets
+
+func (a byOrder) Len() int { return len(a) }
+
+func (a byOrder) Less(i, j int) bool {
+	x, _ := a[i].ConventionalType()
+	y, _ := a[j].ConventionalType()
+	return x.Order < y.Order
+}
+
+func (a byOrder) Swap(i, j int) { a[i], a[j] = a[j], a[i] }
+
 type ConventionalType struct {
 	Title         string
 	Type          string
 	CanBeBreaking bool
 	Level         string
+	Order         int
 }
 
 type ConventionalTypes []ConventionalType

@@ -1,7 +1,6 @@
 package command
 
 import (
-	"strings"
 	"versioner/internal/changelog"
 	"versioner/internal/changeset"
 	"versioner/internal/config"
@@ -50,7 +49,7 @@ func (v Version) Run(ctx *context.Context) error {
 		return err
 	}
 
-	conf.NextVersion = strings.Replace(entry.Version, "v", "", 1)
+	conf.NextVersion = entry.Version
 	if err = config.Set(ctx.Wd(), conf); err != nil {
 		return err
 	}

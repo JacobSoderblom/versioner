@@ -6,6 +6,7 @@ import (
 	"os"
 	"path"
 	"path/filepath"
+	"sort"
 	"strings"
 	"versioner/internal/config"
 
@@ -43,6 +44,8 @@ func ParseChangesets(wd string) (Changesets, error) {
 	if err != nil {
 		return changesets, err
 	}
+
+	sort.Sort(byOrder(changesets))
 
 	return changesets, nil
 }
