@@ -5,6 +5,7 @@ import (
 	"errors"
 	"os"
 	"path"
+	"versioner/internal/context"
 
 	"github.com/go-git/go-git/v5"
 )
@@ -28,24 +29,19 @@ type Configuration struct {
 	NextVersion string   `json:"nextVersion,omitempty"`
 }
 
-func Create(repo *git.Repository) error {
-	if err := Ensure(); err == nil {
+func Create(ctx *context.Context) error {
+	if err := Ensure(ctx.Wd()); err == nil {
 		return AlreadyInitialized
 	}
 
-	wd, err := os.Getwd()
-	if err != nil {
-		return err
-	}
-
-	configPath := path.Join(wd, Dir)
+	configPath := path.Join(ctx.Wd(), Dir)
 	if err := os.MkdirAll(configPath, os.ModePerm); err != nil {
 		return err
 	}
 
 	configFilePath := path.Join(configPath, fileName)
 
-	branch, err := getBaseBranch(repo)
+	branch, err := getBaseBranch(ctx.Repo())
 	if err != nil {
 		return err
 	}
@@ -67,28 +63,18 @@ func Create(repo *git.Repository) error {
 	return nil
 }
 
-func Ensure() error {
-	wd, err := os.Getwd()
-	if err != nil {
-		return err
-	}
-
-	if _, err = os.Stat(path.Join(wd, Dir, fileName)); os.IsNotExist(err) {
+func Ensure(wd string) error {
+	if _, err := os.Stat(path.Join(wd, Dir, fileName)); os.IsNotExist(err) {
 		return NotInitialized
 	}
 
 	return nil
 }
 
-func Read() (Configuration, error) {
+func Read(wd string) (Configuration, error) {
 	var config Configuration
 
-	if err := Ensure(); err != nil {
-		return config, err
-	}
-
-	wd, err := os.Getwd()
-	if err != nil {
+	if err := Ensure(wd); err != nil {
 		return config, err
 	}
 
@@ -104,28 +90,23 @@ func Read() (Configuration, error) {
 	return config, nil
 }
 
-func Set(conf Configuration) error {
-	if err := Ensure(); err != nil {
-		return err
-	}
-
-	wd, err := os.Getwd()
-	if err != nil {
+func Set(wd string, conf Configuration) error {
+	if err := Ensure(wd); err != nil {
 		return err
 	}
 
 	configPath := path.Join(wd, Dir, fileName)
 
-	if err = os.Remove(configPath); err != nil {
+	if err := os.Remove(configPath); err != nil {
 		return err
 	}
 
-	var b []byte
-	if b, err = json.MarshalIndent(&conf, "", "  "); err != nil {
+	b, err := json.MarshalIndent(&conf, "", "  ")
+	if err != nil {
 		return err
 	}
 
-	if err = os.WriteFile(configPath, b, os.ModePerm); err != nil {
+	if err := os.WriteFile(configPath, b, os.ModePerm); err != nil {
 		return err
 	}
 

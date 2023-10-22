@@ -6,20 +6,20 @@ import (
 	"path"
 	"strings"
 	"versioner/internal/config"
+	"versioner/internal/context"
 	"versioner/internal/detect"
 	"versioner/internal/tag"
 
-	"github.com/go-git/go-git/v5"
 	"github.com/go-git/go-git/v5/plumbing/object"
 	"github.com/pkg/errors"
 )
 
-func Add() error {
-	if err := config.Ensure(); err != nil {
+func Add(ctx *context.Context) error {
+	if err := config.Ensure(ctx.Wd()); err != nil {
 		return err
 	}
 
-	project, err := detect.Run()
+	project, err := detect.Run(ctx.Wd())
 	if err != nil {
 		return err
 	}
@@ -33,29 +33,24 @@ func Add() error {
 		return nil
 	}
 
-	return errors.Wrap(change.Save(), "could not save new changeset")
+	return errors.Wrap(change.Save(ctx.Wd()), "could not save new changeset")
 }
 
-func GetLatestChangeSet(repo *git.Repository) (string, error) {
-	wd, err := os.Getwd()
-	if err != nil {
-		return "", err
-	}
-
-	p := path.Join(wd, "CHANGELOG.md")
+func GetLatestChangeSet(ctx *context.Context) (string, error) {
+	p := path.Join(ctx.Wd(), "CHANGELOG.md")
 	b, err := os.ReadFile(p)
 	if err != nil {
 		return "", err
 	}
 
-	_, _, ver, err := tag.FindLatest(repo, "")
+	_, _, ver, err := tag.FindLatest(ctx.Repo(), "")
 	if err != nil {
 		return "", err
 	}
 
 	tag := fmt.Sprintf("v%s", ver.String())
 
-	tags, err := repo.TagObjects()
+	tags, err := ctx.Repo().TagObjects()
 	if err != nil {
 		return "", err
 	}

@@ -21,13 +21,8 @@ const mdTemplate = `---
 
 `
 
-func ParseChangesets() (Changesets, error) {
+func ParseChangesets(wd string) (Changesets, error) {
 	changesets := []Changeset{}
-
-	wd, err := os.Getwd()
-	if err != nil {
-		return changesets, err
-	}
 
 	configPath := path.Join(wd, config.Dir)
 
@@ -44,7 +39,7 @@ func ParseChangesets() (Changesets, error) {
 		return nil
 	})
 
-	changesets, err = parseChangesets(changesetPaths)
+	changesets, err := parseChangesets(changesetPaths)
 	if err != nil {
 		return changesets, err
 	}
@@ -52,8 +47,8 @@ func ParseChangesets() (Changesets, error) {
 	return changesets, nil
 }
 
-func writeChangesetFile(content string) error {
-	p, err := generateUniquePath()
+func writeChangesetFile(wd, content string) error {
+	p, err := generateUniquePath(wd)
 	if err != nil {
 		return err
 	}
@@ -123,12 +118,7 @@ func removeEmptyStrings(s []string) []string {
 	return r
 }
 
-func generateUniquePath() (string, error) {
-	wd, err := os.Getwd()
-	if err != nil {
-		return "", err
-	}
-
+func generateUniquePath(wd string) (string, error) {
 	name := namesgenerator.GetRandomName(0)
 
 	p := path.Join(wd, config.Dir, fmt.Sprintf("%s.md", name))
@@ -137,5 +127,5 @@ func generateUniquePath() (string, error) {
 		return p, nil
 	}
 
-	return generateUniquePath()
+	return generateUniquePath(wd)
 }

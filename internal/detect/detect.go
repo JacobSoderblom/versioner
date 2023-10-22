@@ -11,15 +11,10 @@ type Project struct {
 	Path string
 }
 
-func Run() (Project, error) {
-	project, err := Golang()
+func Run(wd string) (Project, error) {
+	project, err := Golang(wd)
 	if !errors.Is(err, os.ErrNotExist) || err == nil {
 		return project, err
-	}
-
-	wd, err := os.Getwd()
-	if err != nil {
-		return project, nil
 	}
 
 	strs := strings.Split(wd, "/")
