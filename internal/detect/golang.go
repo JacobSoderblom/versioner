@@ -6,17 +6,12 @@ import (
 	"strings"
 )
 
-func Golang() (Project, error) {
+func Golang(wd string) (Project, error) {
 	p := Project{}
-
-	wd, err := os.Getwd()
-	if err != nil {
-		return p, err
-	}
 
 	goModPath := path.Join(wd, "go.mod")
 
-	_, err = os.Stat(goModPath)
+	_, err := os.Stat(goModPath)
 	if err != nil {
 		return p, err
 	}

@@ -5,29 +5,30 @@ import (
 	"versioner/internal/changelog"
 	"versioner/internal/changeset"
 	"versioner/internal/config"
+	"versioner/internal/context"
 	"versioner/internal/tag"
 
 	"github.com/go-git/go-git/v5"
 	"github.com/pkg/errors"
 )
 
-func Bump(repo *git.Repository) error {
-	conf, err := config.Read()
+func Bump(ctx *context.Context) error {
+	conf, err := config.Read(ctx.Wd())
 	if err != nil {
 		return err
 	}
 
-	w, err := repo.Worktree()
+	w, err := ctx.Repo().Worktree()
 	if err != nil {
 		return err
 	}
 
-	cc, err := changeset.ParseChangesets()
+	cc, err := changeset.ParseChangesets(ctx.Wd())
 	if err != nil {
 		return errors.Wrap(err, "could not read changesets")
 	}
 
-	_, _, curr, err := tag.FindLatest(repo, "")
+	_, _, curr, err := tag.FindLatest(ctx.Repo(), "")
 	if err != nil {
 		return err
 	}
@@ -37,7 +38,7 @@ func Bump(repo *git.Repository) error {
 		return err
 	}
 
-	c, err := changelog.Parse()
+	c, err := changelog.Parse(ctx.Wd())
 	if err != nil {
 		return err
 	}
@@ -49,7 +50,7 @@ func Bump(repo *git.Repository) error {
 	}
 
 	conf.NextVersion = strings.Replace(entry.Version, "v", "", 1)
-	if err = config.Set(conf); err != nil {
+	if err = config.Set(ctx.Wd(), conf); err != nil {
 		return err
 	}
 

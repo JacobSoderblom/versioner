@@ -18,12 +18,8 @@ type Changelog struct {
 	Path    string
 }
 
-func Parse() (Changelog, error) {
-	wd, err := os.Getwd()
-	if err != nil {
-		return Changelog{}, errors.Wrap(err, "could not get changelog")
-	}
-	p, err := detect.Run()
+func Parse(wd string) (Changelog, error) {
+	p, err := detect.Run(wd)
 	if err != nil {
 		return Changelog{}, errors.Wrap(err, "could not get changelog")
 	}

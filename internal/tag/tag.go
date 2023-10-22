@@ -3,6 +3,7 @@ package tag
 import (
 	"strings"
 	"versioner/internal/config"
+	"versioner/internal/context"
 
 	"github.com/Masterminds/semver"
 	"github.com/go-git/go-git/v5"
@@ -16,8 +17,8 @@ var (
 	TagAlreadyExist    = errors.New("tag already exist")
 )
 
-func Tag(repo *git.Repository) error {
-	conf, err := config.Read()
+func Tag(ctx *context.Context) error {
+	conf, err := config.Read(ctx.Wd())
 	if err != nil {
 		return err
 	}
@@ -26,16 +27,16 @@ func Tag(repo *git.Repository) error {
 		return NoVersionAvailable
 	}
 
-	if err = tagExists(conf.NextVersion, repo); err != nil {
+	if err = tagExists(conf.NextVersion, ctx.Repo()); err != nil {
 		return err
 	}
 
-	h, err := repo.Head()
+	h, err := ctx.Repo().Head()
 	if err != nil {
 		return err
 	}
 
-	if _, err = repo.CreateTag(conf.NextVersion, h.Hash(), &git.CreateTagOptions{Message: conf.NextVersion}); err != nil {
+	if _, err = ctx.Repo().CreateTag(conf.NextVersion, h.Hash(), &git.CreateTagOptions{Message: conf.NextVersion}); err != nil {
 		return err
 	}
 

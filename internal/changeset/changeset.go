@@ -74,7 +74,7 @@ func (c Changeset) ConventionalType() (ConventionalType, error) {
 	return ConventionalType{}, errors.Wrap(ErrConventionalTypeNotFound, fmt.Sprintf("%s:", c.Type))
 }
 
-func (c Changeset) Save() error {
+func (c Changeset) Save(wd string) error {
 	release := c.Type
 	if c.Breaking {
 		release += "!"
@@ -82,7 +82,7 @@ func (c Changeset) Save() error {
 
 	content := fmt.Sprintf(mdTemplate, release, c.Summary)
 
-	return writeChangesetFile(content)
+	return writeChangesetFile(wd, content)
 }
 
 func (c Changeset) Remove() error {
