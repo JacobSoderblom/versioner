@@ -1,4 +1,4 @@
-package add
+package tui
 
 import (
 	"versioner/internal/changeset"
@@ -30,7 +30,7 @@ type mainModel struct {
 	aborting         bool
 }
 
-func startTea(project detect.Project) (changeset.Changeset, bool, error) {
+func NewAddProgram(project detect.Project) (changeset.Changeset, bool, error) {
 	items := make([]string, len(changeset.Types))
 
 	for i, t := range changeset.Types {

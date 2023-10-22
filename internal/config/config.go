@@ -5,14 +5,11 @@ import (
 	"errors"
 	"os"
 	"path"
-	"versioner/internal/context"
-
-	"github.com/go-git/go-git/v5"
 )
 
 const (
 	Dir      = ".versioner"
-	fileName = "config.json"
+	FileName = "config.json"
 )
 
 var (
@@ -29,42 +26,8 @@ type Configuration struct {
 	NextVersion string   `json:"nextVersion,omitempty"`
 }
 
-func Create(ctx *context.Context) error {
-	if err := Ensure(ctx.Wd()); err == nil {
-		return AlreadyInitialized
-	}
-
-	configPath := path.Join(ctx.Wd(), Dir)
-	if err := os.MkdirAll(configPath, os.ModePerm); err != nil {
-		return err
-	}
-
-	configFilePath := path.Join(configPath, fileName)
-
-	branch, err := getBaseBranch(ctx.Repo())
-	if err != nil {
-		return err
-	}
-
-	config := Configuration{
-		BaseBranch: branch,
-		Ignore:     []string{},
-	}
-
-	var b []byte
-	if b, err = json.MarshalIndent(&config, "", "  "); err != nil {
-		return err
-	}
-
-	if err = os.WriteFile(configFilePath, b, os.ModePerm); err != nil {
-		return err
-	}
-
-	return nil
-}
-
 func Ensure(wd string) error {
-	if _, err := os.Stat(path.Join(wd, Dir, fileName)); os.IsNotExist(err) {
+	if _, err := os.Stat(path.Join(wd, Dir, FileName)); os.IsNotExist(err) {
 		return NotInitialized
 	}
 
@@ -78,7 +41,7 @@ func Read(wd string) (Configuration, error) {
 		return config, err
 	}
 
-	b, err := os.ReadFile(path.Join(wd, Dir, fileName))
+	b, err := os.ReadFile(path.Join(wd, Dir, FileName))
 	if err != nil {
 		return config, err
 	}
@@ -95,7 +58,7 @@ func Set(wd string, conf Configuration) error {
 		return err
 	}
 
-	configPath := path.Join(wd, Dir, fileName)
+	configPath := path.Join(wd, Dir, FileName)
 
 	if err := os.Remove(configPath); err != nil {
 		return err
@@ -111,34 +74,4 @@ func Set(wd string, conf Configuration) error {
 	}
 
 	return nil
-}
-
-func getBaseBranch(repo *git.Repository) (string, error) {
-	conf, err := repo.Config()
-	if err != nil {
-		return "", err
-	}
-
-	main := conf.Branches["main"]
-	master := conf.Branches["master"]
-
-	if main != nil {
-		return "main", nil
-	}
-
-	if master != nil {
-		return "master", nil
-	}
-
-	branches := []string{}
-
-	for branch := range conf.Branches {
-		branches = append(branches, branch)
-	}
-
-	if len(branches) > 0 {
-		return branches[0], nil
-	}
-
-	return "", nil
 }
